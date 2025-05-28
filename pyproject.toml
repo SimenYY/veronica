@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "art>=6.5",
     "colorlog>=6.9.0",
     "filelock>=3.18.0",
     "loguru>=0.7.3",
