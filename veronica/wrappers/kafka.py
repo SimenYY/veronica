@@ -1,10 +1,12 @@
 import uuid
 import logging
+import asyncio
+import threading
 from typing import Optional, Callable, Any
 from dataclasses import dataclass, field, asdict
 
 try:
-    from confluent_kafka import Producer
+    import confluent_kafka
 except ImportError:
     raise ImportError("confluent_kafka is not installed., Please install it using pip insall veronica[kafka]")
 
@@ -15,55 +17,116 @@ __all__ = [
 ]
 
 @dataclass
-class KafkaProducer:
-    """kafka producer
-    
-    Notes:
-        bootstrap_servers format: host1:port1,host2:port2,host3:port3
-    """
+class BaseProducer:
     bootstrap_servers: str = "localhost:9092"
     client_id: Optional[str] = None
     security_protocol: Optional[str] = None
     sasl_mechanism: Optional[str] = None
     sasl_username: Optional[str] = None
     sasl_password: Optional[str] = field(default=None, repr=False)
-    def __post_init__(self) -> None:
+
+    def  __post_init__(self) -> None:
         if self.client_id is None:
             self.client_id = f"{self.__class__.__name__}_{uuid.uuid4()}"
-        
-        self.producer = Producer(self._Format_fields(), logger=logger)
-    def produce(
-        self, 
-        topic: str, 
-        value: str, 
-        callback: Optional[Callable[[Any, Any], None]] = None
-    ) -> None:
-        """Produces a message to the given topic
-
-        :param str topic: _description_
-        :param str value: _description_
-        :param Optional[Callable[[Any, Any], None]] callback: _description_, defaults to None
-        """
-        _callback = callback
-        if callback is None:
-            def delivery_report(err, msg):
-                if err is not None:
-                    logger.error(f"Message delivery failed: {err}")
-                else:
-                    logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}]")
-            _callback = delivery_report   
-            
-        self.producer.produce(topic, value, callback=_callback)
-        self.producer.poll(0)
     
-    def to_dict(self, exclude_none: bool = False) -> dict:
+        self._producer = confluent_kafka.Producer(self.to_configs())
+        self._cancelled: bool = False
+        self._loop:  asyncio.AbstractEventLoop = asyncio.get_event_loop()
+        self._poll_thread: threading.Thread = threading.Thread(target=self._poll_loop)
+        self._poll_thread.start()
+
+    def _poll_loop(self) -> None:
+        while not self._cancelled:
+            self._producer.poll(timeout=0.1)
+    def close(self) -> None:
+        self._cancelled = True
+        self._poll_thread.join()
+    def to_dict(self, *, exclude_none: bool = False) -> dict:
         if exclude_none:
             return {k: v for k, v in asdict(self).items() if v is not None}
         return asdict(self)
+    
+    @staticmethod
+    def on_delivery(
+        err: confluent_kafka.KafkaError, 
+        msg: confluent_kafka.Message
+    ) -> None:
+        if err is not None:
+            logger.error(f"Message delivery failed: {err}")
+        else:
+            logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+    
 
-    def _Format_fields(self) -> dict:
+    def to_configs(self) -> dict:
         """Formatting fields to build config for kafka producer
 
         :return dict: _description_
         """
         return {k.replace("_", "."): v for k, v in self.to_dict(exclude_none=True).items()}
+    
+    def produce(
+        self, 
+        topic: str, 
+        value: str, 
+        on_delivery: Optional[Callable[[Any, Any], None]] = None
+    ) -> Any:
+        raise NotImplementedError
+
+
+class AsyncProducer(BaseProducer):
+    """_summary_
+
+    Notes:
+        A produce method in which delivery notifications are made available
+        via both the returned future and on_delivery callback (if specified).
+    
+    :param _type_ BaseProducer: _description_
+    """
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        
+        self._loop:  asyncio.AbstractEventLoop = asyncio.get_event_loop()
+
+    def produce(
+        self, 
+        topic: str, 
+        value: str, 
+        on_delivery: Optional[Callable[[Optional[confluent_kafka.KafkaError], Optional[confluent_kafka.Message]], None]] = None
+    ):
+        """Produces a message to the given topic with a callback
+        
+        :param str topic: _description_
+        :param str value: _description_
+        :param Optional[Callable[[Any, Any], None]] on_delivery: _description_, defaults to None
+        """
+        result = self._loop.create_future()
+        def ack(err, msg) -> None:
+            if err:
+                self._loop.call_soon_threadsafe(
+                    result.set_exception, 
+                    confluent_kafka.KafkaException(err),
+                )
+            else:
+                self._loop.call_soon_threadsafe(
+                    result.set_result,
+                    msg,
+                )
+            if on_delivery:
+                self._loop.call_soon_threadsafe(
+                    on_delivery,
+                    err,
+                    msg,
+                )
+        self._producer.produce(topic, value, on_delivery=ack)
+        return result
+        
+        
+class Producer(BaseProducer):
+    
+    def produce(
+        self,
+        topic: str,
+        value: Any,
+        on_delivery: Optional[Callable[[Optional[confluent_kafka.KafkaError], Optional[confluent_kafka.Message]], None]] = None
+    ) -> None:
+        self._producer.produce(topic, value, on_delivery=on_delivery)
