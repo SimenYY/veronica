@@ -1,18 +1,19 @@
 import sys
+import logging
 from pathlib import Path
 from typing import Union, Optional
-import logging
 from dataclasses import dataclass
 
 from filelock import FileLock, AsyncFileLock, BaseAsyncFileLock, BaseFileLock
 
+from veronica.base.models import DataModel
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["SingleAppGuard"]
 
 @dataclass
-class SingleAppGuard:
+class SingleAppGuard(DataModel):
     """App guard
 
     Usage:
@@ -20,11 +21,13 @@ class SingleAppGuard:
             print("your func")
 
     """
-    app_name: str = "app.lock"
+    app_name: str = "single_app_guard.lock"
+    
     def __post_init__(self) -> None:
         self.lock_file: Path = Path.cwd() / f"{self.app_name}.lock"
         self.lock: Optional[Union[BaseAsyncFileLock, BaseFileLock]] = None
         logger.info(f"lock file path: {str(self.lock_file)}")
+        
     def __enter__(self):
         try:
             self.lock = FileLock(self.lock_file)
