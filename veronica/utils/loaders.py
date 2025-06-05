@@ -93,6 +93,8 @@ class Loader(BaseLoader):
         """
         try:
             return self.load(content)
+        except ImportError as e:
+            raise e
         except Exception as e:
             if self._context.content is None:
                 self._context.content = content
