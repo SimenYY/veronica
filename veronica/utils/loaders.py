@@ -7,16 +7,19 @@ from typing import (
     Self, 
     Sequence,
     Type,
+    Final,
+    
+    
 )
 from functools import reduce
 from abc import ABC
 from dataclasses import dataclass, field
-from enum import StrEnum
 
 __all__ = [
     "JsonLoader",
     "YamlLoader",
     "TomlLoader",
+    "Json5Loader",
     "LoaderManager",
 ]
 
@@ -142,6 +145,7 @@ class Loader(BaseLoader):
     
 @dataclass    
 class JsonLoader(Loader):
+    
     def load(self, content: str) -> dict:
         import json
         return json.loads(content)
@@ -149,6 +153,7 @@ class JsonLoader(Loader):
     
 @dataclass
 class YamlLoader(Loader):
+    
     def load(self, content: str) -> dict:
         import yaml
         return yaml.safe_load(content)
@@ -161,20 +166,23 @@ class TomlLoader(Loader):
         import toml
         return toml.loads(content)
 
-
-class _SupportedFormatEnum(StrEnum):
-    JSON = "json"
-    YAML = "yaml"
-    TOML = "toml"
-
-
 @dataclass
+class Json5Loader(Loader):
+    
+    def load(self, content: str) -> dict:
+        import pyjson5
+        return pyjson5.loads(content)
+
+
+
+
+@dataclass()
 class LoaderManager:
     """
     >>> loader_manager = LoaderManager()
     >>> _ = loader_manager.add_loader_by_format("json")
     >>> _ = loader_manager.add_loader_by_format("yaml").add_loader_by_format("toml")
-    >>> print(loader_manager.get_chain())
+    >>> print(loader_manager.build_chain())
     JsonLoader --> YamlLoader --> TomlLoader
 
     :raises TypeError: _description_
@@ -184,6 +192,13 @@ class LoaderManager:
     :return _type_: _description_
     """
     _loaders: List[Loader] = field(default_factory=list)
+    
+    format_to_loader_types: ClassVar[Final[[Dict[str, Type[Loader]]]]] = {
+        "json": JsonLoader,
+        "json5": Json5Loader,
+        "yaml": YamlLoader,
+        "toml": TomlLoader
+    }
     
     @property
     def loaders(self) -> Sequence[Loader]:
@@ -201,7 +216,7 @@ class LoaderManager:
     def add_loader_by_format(self, fmt: str) -> Self:
         """ fmt e.g. "json", "yaml" 
 
-        :param _SupportedFormatEnum string_format: _description_
+        :param str string_format: _description_
         :raises ValueError: _description_
         :return Self: _description_
         """
@@ -210,15 +225,10 @@ class LoaderManager:
             raise ValueError(f"Invalid format type: {type(fmt)}")
             
         fmt = fmt.lower()
-        match fmt:
-            case _SupportedFormatEnum.JSON:
-                self.add_loader(JsonLoader())
-            case _SupportedFormatEnum.YAML:
-                self.add_loader(YamlLoader()) 
-            case _SupportedFormatEnum.TOML:
-                self.add_loader(TomlLoader())
-            case _:
-                raise ValueError(f"This format is not supported: {fmt}")
+        if fmt not in self.format_to_loader_types:
+            raise ValueError(f"This format is not supported: {fmt}")
+        
+        self.add_loader(self.format_to_loader_types[fmt]())
         
         return self
     
@@ -227,19 +237,19 @@ class LoaderManager:
         self._loaders.clear()
         
     
-    def get_chain(self) -> Loader:
+    def build_chain(self) -> Loader:
         if not self.loaders:
             raise ValueError("No loaders have been added to the chain.")
         
         return reduce(lambda loader, next_loader: loader | next_loader, self._loaders)
     
     @classmethod
-    def get_default_chain(cls) -> Loader:
+    def build_default_chain(cls) -> Loader:
         lm = cls()
-        for fmt in _SupportedFormatEnum:
+        for fmt in cls.format_to_loader_types:
             lm.add_loader_by_format(fmt)
         
-        return lm.get_chain()
+        return lm.build_chain()
         
 
 if __name__ == "__main__":
