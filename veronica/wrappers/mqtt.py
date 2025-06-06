@@ -1,7 +1,7 @@
 import uuid
 import logging
 from typing import Tuple, Any, Optional, Union
-from dataclasses import dataclass, field
+from dataclasses import field
 
 try:
     import paho.mqtt.client as mqtt
@@ -18,6 +18,8 @@ try:
 except ImportError:
     raise ImportError("paho-mqtt is not installed., Please install it using pip insall veronica[mqtt]")
 
+from veronica.base.models import DataModel
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,9 +27,7 @@ __all__ = [
     "MqttClientV2",
 ]
 
-
-@dataclass
-class MqttClientV2:
+class MqttClientV2(DataModel):
     """MQTT client wrapper based on Callback API Version 2
     
     Notes:
@@ -40,6 +40,7 @@ class MqttClientV2:
     auth: Optional[Tuple[str, str]] = field(default=None, repr=False)
     user_data: Any = None
     qos: int = 0
+    
     
     def __post_init__(self) -> None:
         if self.client_id is None:
@@ -61,13 +62,17 @@ class MqttClientV2:
         self._address: str = f"{self.host}:{self.port}"
         
         self._set_on_log()
+        
+        
     @property
     def address(self) -> str:
         return self._address
 
+
     @property
     def client(self) -> mqtt.Client:
         return self._client
+    
     
     def set_on_connect(
         self, 
@@ -93,6 +98,8 @@ class MqttClientV2:
             self._client.on_connect = on_connect
         else:
             self._client.on_connect = connect_callback  
+            
+            
     def set_on_connect_fail(
         self, 
         connect_fail_callback: Optional[CallbackOnConnectFail] = None
@@ -113,6 +120,8 @@ class MqttClientV2:
             self._client.on_connect_fail = connect_fail_callback
         else:
             self._client.on_connect_fail = connect_fail_callback
+            
+            
     def set_on_disconnect(
         self, 
         disconnect_callback: Optional[CallbackOnDisconnect] = None
@@ -133,6 +142,7 @@ class MqttClientV2:
             self._client.on_disconnect = on_disconnect
         else:
             self._client.on_disconnect = disconnect_callback
+            
 
     def set_on_publish(
         self, 
@@ -155,6 +165,7 @@ class MqttClientV2:
             self._client.on_publish = on_publish
         else:
             self._client.on_publish = publish_callback
+            
     
     def set_on_message(
         self,
@@ -278,6 +289,7 @@ class MqttClientV2:
         
         return self._client.publish(topic=topic, payload=payload, qos=self.qos, *args, **kwargs)
 
+
     def subscribe(
             self,
             topic: Union[str, tuple, list], 
@@ -301,6 +313,7 @@ class MqttClientV2:
         
         self._client.subscribe(topic=topic, qos=self.qos, *args, **kwargs)
     
+    
     def __enter__(self) -> None:
         if self._client is not None:
             self._client.loop_start()
@@ -319,6 +332,8 @@ class MqttClientV2:
 
         if exc_type is not None:
             logger.error(f"Exception in context: {exc_val}")
+            
+            
     def run(self, timeout: float = 1.0, retry_first_connection: bool = True) -> MQTTErrorCode:
         """Blocked running
         
