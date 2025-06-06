@@ -8,8 +8,6 @@ from typing import (
     Sequence,
     Type,
     Final,
-    
-    
 )
 from functools import reduce
 from abc import ABC
@@ -30,6 +28,7 @@ class _LoaderContext:
     content: Any = None
     loader_errors: Dict[str, Exception] = field(default_factory=dict)
 
+
     def format_errors(self) -> str:
         """
         Notes:
@@ -46,20 +45,26 @@ class _LoaderContext:
 
 @dataclass
 class BaseLoader(ABC):
+    
     _successor: Optional["BaseLoader"] = None
+    
+    
     @property
     def successor(self) -> Optional["BaseLoader"]:
         return self._successor
     
+    
     @property
     def class_name(self) -> str:
         return self.__class__.__name__
+    
     
     @successor.setter
     def successor(self, loader: "BaseLoader") -> None:
         if not isinstance(loader, BaseLoader):
             raise TypeError(f"The loader must be an instance of Loader: {type(loader)}")
         self._successor = loader
+    
     
     def load(self, content: Any) -> Any:
         """
@@ -70,6 +75,7 @@ class BaseLoader(ABC):
         """
         raise NotImplementedError
     
+    
     def load_chain(self, content: Any) -> Any:
         """
 
@@ -79,12 +85,13 @@ class BaseLoader(ABC):
         """
         raise NotImplementedError
     
-
     
 @dataclass
 class Loader(BaseLoader):
     
     _context: ClassVar[_LoaderContext] = _LoaderContext()
+    
+    
     def load_chain(self, content: str) -> Any:
         """
 
@@ -101,6 +108,7 @@ class Loader(BaseLoader):
             self._context.loader_errors[self.class_name] = e
             return self._load_next()
     
+    
     def _load_next(self) -> Any:
         """
         
@@ -112,6 +120,7 @@ class Loader(BaseLoader):
         else:
             raise SyntaxError(self._context.format_errors())
     
+    
     def __str__(self) -> str:
         
         parts = []
@@ -122,6 +131,7 @@ class Loader(BaseLoader):
             current = current.successor
             
         return " --> ".join(parts)
+    
     
     def __or__(self, other: "Loader") -> "Loader":
         """
@@ -148,6 +158,7 @@ class Loader(BaseLoader):
 @dataclass    
 class JsonLoader(Loader):
     
+    
     def load(self, content: str) -> dict:
         import json
         return json.loads(content)
@@ -155,6 +166,7 @@ class JsonLoader(Loader):
     
 @dataclass
 class YamlLoader(Loader):
+    
     
     def load(self, content: str) -> dict:
         import yaml
@@ -164,12 +176,14 @@ class YamlLoader(Loader):
 @dataclass
 class TomlLoader(Loader):
     
+    
     def load(self, content: str) -> dict:
         import toml
         return toml.loads(content)
 
 @dataclass
 class Json5Loader(Loader):
+    
     
     def load(self, content: str) -> dict:
         import pyjson5
@@ -215,6 +229,7 @@ class LoaderManager:
 
         return self
     
+    
     def add_loader_by_format(self, fmt: str) -> Self:
         """ fmt e.g. "json", "yaml" 
 
@@ -233,6 +248,7 @@ class LoaderManager:
         self.add_loader(self.format_to_loader_types[fmt]())
         
         return self
+    
     
     def clear(self) -> None:
         
