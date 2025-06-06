@@ -1,22 +1,28 @@
-import sys
-import logging
 import inspect
-from pathlib import Path
-
+import logging
 import loguru
 
 __all__ = [
-    "InterceptHandler",
+    "PropagateFromLoguruHandler",
+    "InterceptToLoguruHandler",
     "ColoredStreamHandler",
-    "LoguruManager",
 ]
 
 
-class InterceptHandler(logging.Handler):
+class PropagateFromLoguruHandler(logging.Handler):
+    """Propagate loguru messages to logging
+
+    Usage:
+        logger.add(PropagateHandler(), format="{message}")
+    """
+    def emit(self, record: logging.LogRecord) -> None:
+        logging.getLogger(record.name).handle(record)
+
+
+class InterceptToLoguruHandler(logging.Handler):
     """Intercept all logging calls and redirect them to Loguru
     
     Usage:
-    
         logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
     """
 
@@ -70,63 +76,3 @@ class ColoredStreamHandler(logging.StreamHandler):
             },
             style='%'
         ))
-
-class LoguruManager:
-    """loguru manager
-    
-    Settings:
-        log_level: str = "DEBUG"
-        log_dir: str = "logs"
-        log_rotation: str = "00:00"
-        log_retention: str = "3 days"
-        log_compression: str = "zip"
-        log_enqueue: bool = True
-    
-    """
-
-    def __init__(self, name: str, level: str = "DEBUG"):
-        loguru.logger.remove()
-
-        self.name = name
-        self.level = level
-
-    def include_logging_namespace(self, namespace: str) -> None:
-        
-        logging_logger = logging.getLogger(namespace)
-        self.include_logging_logger(logging_logger)
-
-    def include_logging_logger(self, logging_logger: logging.Logger) -> None:
-        
-        logging_logger.setLevel(self.level)
-        logging_logger.handlers.clear()
-        logging_logger.addHandler(InterceptHandler())
-        logging_logger.propagate = False
-
-    def setup_console(self) -> None:
-
-        loguru.logger.add(
-            sys.stdout,
-            level=self.level
-        )
-
-    def setup_file(
-            self,
-            log_dir: str = 'logs',
-            *,
-            rotation: str = '00:00',
-            retention: str = '3 days',
-            compression: str = 'zip',
-            enqueue: bool = True,
-    ):
-
-        _log_dir = Path(log_dir)
-        _log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = _log_dir / self.name / (f"{self.name}" + "_{time: YYYY-MM-DD}.log")
-        loguru.logger.add(
-            str(log_file),
-            level=self.level,
-            rotation=rotation,
-            retention=retention,
-            compression=compression,
-            enqueue=enqueue
-        )
