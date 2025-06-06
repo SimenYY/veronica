@@ -3,27 +3,34 @@ import logging
 import asyncio
 import threading
 from typing import Optional, Callable, Any
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 
 try:
     import confluent_kafka
 except ImportError:
     raise ImportError("confluent_kafka is not installed., Please install it using pip insall veronica[kafka]")
 
+from veronica.base.models import DataModel
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "KafkaProducer"
+    "AsyncProducer",
+    "Producer"
 ]
 
 @dataclass
-class BaseProducer:
+class BaseProducer(DataModel):
+    """Base producer
+
+    """
     bootstrap_servers: str = "localhost:9092"
     client_id: Optional[str] = None
     security_protocol: Optional[str] = None
     sasl_mechanism: Optional[str] = None
     sasl_username: Optional[str] = None
     sasl_password: Optional[str] = field(default=None, repr=False)
+
 
     def  __post_init__(self) -> None:
         if self.client_id is None:
@@ -35,16 +42,16 @@ class BaseProducer:
         self._poll_thread: threading.Thread = threading.Thread(target=self._poll_loop)
         self._poll_thread.start()
 
+
     def _poll_loop(self) -> None:
         while not self._cancelled:
             self._producer.poll(timeout=0.1)
+            
+            
     def close(self) -> None:
         self._cancelled = True
         self._poll_thread.join()
-    def to_dict(self, *, exclude_none: bool = False) -> dict:
-        if exclude_none:
-            return {k: v for k, v in asdict(self).items() if v is not None}
-        return asdict(self)
+    
     
     @staticmethod
     def on_delivery(
@@ -64,6 +71,7 @@ class BaseProducer:
         """
         return {k.replace("_", "."): v for k, v in self.to_dict(exclude_none=True).items()}
     
+    
     def produce(
         self, 
         topic: str, 
@@ -73,6 +81,7 @@ class BaseProducer:
         raise NotImplementedError
 
 
+@dataclass
 class AsyncProducer(BaseProducer):
     """_summary_
 
@@ -86,6 +95,7 @@ class AsyncProducer(BaseProducer):
         super().__post_init__()
         
         self._loop:  asyncio.AbstractEventLoop = asyncio.get_event_loop()
+        
 
     def produce(
         self, 
@@ -121,6 +131,7 @@ class AsyncProducer(BaseProducer):
         return result
         
         
+@dataclass
 class Producer(BaseProducer):
     
     def produce(
