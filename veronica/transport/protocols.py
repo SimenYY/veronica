@@ -14,8 +14,10 @@ from typing import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "BaseFactory",
     "ClientFactory",
     "ClientProtocol",
+    "Connector",
 ]
 
 
