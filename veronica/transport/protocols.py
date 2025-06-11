@@ -31,7 +31,7 @@ class Connector:
     
     host: str
     port: int
-    factory: "ClientFactory"
+    factory: "BaseFactory"
     loop: Optional[asyncio.AbstractEventLoop] = None
 
     _transport: Optional[asyncio.Transport] = None
@@ -207,6 +207,24 @@ class BaseFactory(ABC):
         :return asyncio.Protocol: _description_
         """
         ...
+    @abstractmethod
+    def retry(self, connector: Connector) -> None:
+        """retry  to connect
+
+        :param Connector connector: _description_
+        """
+        ...
+        
+    @abstractmethod
+    def on_connection_lost(self, connector: Connector, exc: Optional[Exception]) -> None:
+        """callback when connect lost
+
+        :param Connector connector: _description_
+        :param Optional[Exception] exc: _description_
+        """
+        ...
+        
+
     
 
 
