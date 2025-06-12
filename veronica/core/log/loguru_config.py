@@ -1,7 +1,11 @@
+"""
+> https://loguru.readthedocs.io/en/stable/api/logger.html#loguru._logger.Logger.configure
+"""
+
+
 import logging
 from dataclasses import dataclass, field
 from typing import (
-    Type,
     Dict, 
     Any,
     List,
@@ -9,7 +13,6 @@ from typing import (
     Self,
     TYPE_CHECKING
 )
-from pathlib import Path
 import loguru
 
 
