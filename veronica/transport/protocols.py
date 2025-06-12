@@ -52,9 +52,6 @@ class Connector:
             logger.warning("Already connected.")
             return
         
-        if self._transport is not None:
-            print(self._transport.is_closing())
-        
         if self.loop is None:
             raise RuntimeError("Event loop is not available")
         
