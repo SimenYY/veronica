@@ -9,7 +9,6 @@ from pydantic_settings import (
 ) 
 
 __all__ = [
-    "ExtendedBaseSettings",
     "YamlSettings",
     "JsonSettings",
 ]
@@ -51,8 +50,6 @@ class YamlSettings(ExtendedBaseSettings):
     model_config = SettingsConfigDict(
         yaml_file="config.yaml",
         yaml_file_encoding="utf-8",
-        extra='ignore',
-        case_sensitive=True,
     )
 
 class JsonSettings(ExtendedBaseSettings):
@@ -60,6 +57,4 @@ class JsonSettings(ExtendedBaseSettings):
     model_config = SettingsConfigDict(
         json_file="config.json",
         json_file_encoding="utf-8",
-        extra='ignore',
-        case_sensitive=True,
     )

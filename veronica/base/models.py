@@ -11,8 +11,8 @@ class DataModel:
         """ Convert dataclass to dict
 
         Notes:
+            * Can only be used with @dataclass
             * A TypeError will be raised if self contains a field that cannot be deep copied (e.g. sys.stdout).
-        
         
         :param bool exclude_none: _description_, defaults to False
         :raises TypeError: _description_

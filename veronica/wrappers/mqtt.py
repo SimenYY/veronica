@@ -1,24 +1,13 @@
 import uuid
 import logging
 from typing import Tuple, Any, Optional, Union
-from dataclasses import field
+from dataclasses import field, dataclass
 
 try:
     import paho.mqtt.client as mqtt
-    from paho.mqtt.client import (
-        CallbackOnConnect,
-        CallbackOnDisconnect,
-        CallbackOnConnectFail,
-        CallbackOnMessage,
-        CallbackOnPublish,
-        CallbackOnSubscribe,
-        CallbackOnLog,
-    )
     from paho.mqtt.enums import CallbackAPIVersion, MQTTErrorCode
 except ImportError:
     raise ImportError("paho-mqtt is not installed., Please install it using pip insall veronica[mqtt]")
-
-from veronica.base.models import DataModel
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +16,18 @@ __all__ = [
     "MqttClientV2",
 ]
 
-class MqttClientV2(DataModel):
+@dataclass
+class MqttClientV2():
     """MQTT client wrapper based on Callback API Version 2
     
     Notes:
         Uses MQTT v5.0
         Requires paho-mqtt >= 2.0
+        
+        refer: https://github.com/eclipse-paho/paho.mqtt.python
+        
+        封装目的是为了简化客户端的配置，提供默认的回调函数，以及日志
+        
     """
     host: str = "localhost"
     port: int = 1883
@@ -57,26 +52,18 @@ class MqttClientV2(DataModel):
         if self.user_data is not None:
             self._client.user_data_set(self.user_data)
 
-        self._client.enable_logger(logger)
+        self._client.enable_logger()
             
         self._address: str = f"{self.host}:{self.port}"
-        
-        self._set_on_log()
         
         
     @property
     def address(self) -> str:
         return self._address
-
-
-    @property
-    def client(self) -> mqtt.Client:
-        return self._client
-    
     
     def set_on_connect(
         self, 
-        connect_callback: Optional[CallbackOnConnect] = None
+        connect_callback: Optional[mqtt.CallbackOnConnect] = None
         ) -> None:
         """set connect callback
         
@@ -84,11 +71,8 @@ class MqttClientV2(DataModel):
             connect_callback(client, userdata, flags, reason_code, properties)
 
 
-        :param Optional[CallbackOnConnect] connect_callback: _description_, defaults to None
+        :param Optional[mqtt.CallbackOnConnect] connect_callback: _description_, defaults to None
         """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
         if connect_callback is None:
             def on_connect(client, userdata, flags, reason_code, properties):
                 if reason_code.is_failure:
@@ -102,40 +86,34 @@ class MqttClientV2(DataModel):
             
     def set_on_connect_fail(
         self, 
-        connect_fail_callback: Optional[CallbackOnConnectFail] = None
+        connect_fail_callback: Optional[mqtt.CallbackOnConnectFail] = None
     ) -> None:
         """set connect fail callback
         
         Notes:
             connect_fail_callback(client, userdata)
 
-        :param Optional[CallbackOnConnectFail] connect_fail_callback: _description_, defaults to None
+        :param Optional[mqtt.CallbackOnConnectFail] connect_fail_callback: _description_, defaults to None
         """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
         if connect_fail_callback is None:
             def on_connect_fail(client, userdata):
                 logger.error(f"Failed to connect to MQTT broker[{self.address}]")
-            self._client.on_connect_fail = connect_fail_callback
+            self._client.on_connect_fail = on_connect_fail
         else:
             self._client.on_connect_fail = connect_fail_callback
             
             
     def set_on_disconnect(
         self, 
-        disconnect_callback: Optional[CallbackOnDisconnect] = None
+        disconnect_callback: Optional[mqtt.CallbackOnDisconnect] = None
     ) -> None:
         """set disconnect callback
         
         Notes:
             disconnect_callback(client, userdata, reason_code, properties)
 
-        :param Optional[CallbackOnDisconnect] disconnect_callback: _description_, defaults to None
+        :param Optional[mqtt.CallbackOnDisconnect] disconnect_callback: _description_, defaults to None
         """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
         if disconnect_callback is None:
             def on_disconnect(client, userdata, reason_code, properties):
                 logger.info(f'Disconnected from MQTT Broker[{self.address}], client id: {self.client_id}.')
@@ -146,18 +124,15 @@ class MqttClientV2(DataModel):
 
     def set_on_publish(
         self, 
-        publish_callback: Optional[CallbackOnPublish] = None,
+        publish_callback: Optional[mqtt.CallbackOnPublish] = None,
     ) -> None:
         """set publish callback
 
         Notes:
             publish_callback(client, userdata, mid, reason_code, properties)
             
-        :param Optional[CallbackOnPublish] callback: _description_, defaults to None
-        """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
+        :param Optional[mqtt.CallbackOnPublish] callback: _description_, defaults to None
+        """    
         if publish_callback is None:
             def on_publish(client, userdata, mid, reason_code, properties):
                 logger.debug(f'mid: {mid}, reason_code: {reason_code}, properties: {properties}')
@@ -169,18 +144,15 @@ class MqttClientV2(DataModel):
     
     def set_on_message(
         self,
-        message_callback: Optional[CallbackOnMessage] = None,
+        message_callback: Optional[mqtt.CallbackOnMessage] = None,
     ) -> None:
         """set message callback
 
         Notes:
             message_callback(client, userdata, message)
             
-        :param Optional[CallbackOnMessage] message_callback: _description_, defaults to None
-        """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
+        :param Optional[mqtt.CallbackOnMessage] message_callback: _description_, defaults to None
+        """  
         if message_callback is None:
             def on_message(client, userdata, message):
                 logger.debug(f"topic:{message.topic}, payload: {str(message.payload)}")
@@ -191,18 +163,15 @@ class MqttClientV2(DataModel):
     
     def set_on_subscribe(
         self, 
-        subscribe_callback: Optional[CallbackOnSubscribe] = None,
+        subscribe_callback: Optional[mqtt.CallbackOnSubscribe] = None,
     ) -> None:
         """set subscribe callback
         
         Notes:
             subscribe_callback(client, userdata, mid, reason_code_list, properties)
 
-        :param Optional[CallbackOnSubscribe] subscribe_callback: _description_, defaults to None
+        :param Optional[mqtt.CallbackOnSubscribe] subscribe_callback: _description_, defaults to None
         """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
         if subscribe_callback is None:
             def on_subscribe(client, userdata, mid, reason_code_list, properties):
                 if reason_code_list[0].is_failure:
@@ -216,19 +185,16 @@ class MqttClientV2(DataModel):
     
     def _set_on_log(
         self, 
-        log_callback: Optional[CallbackOnLog] = None
+        log_callback: Optional[mqtt.CallbackOnLog] = None
     ) -> None:
         """set log callback
 
         Notes:
             log_callback(client, userdata, level, buf)
             
-        :param Optional[CallbackOnLog] log_callback: _description_, defaults to None
+        :param Optional[mqtt.CallbackOnLog] log_callback: _description_, defaults to None
         :raises RuntimeError: _description_
         """
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
-        
         if log_callback is None:
             
             def on_log(client, userdata, paho_log_level, messages):
@@ -249,8 +215,6 @@ class MqttClientV2(DataModel):
         
     
     def connect(self, is_async: bool =False, *args, **kwargs) -> Optional[MQTTErrorCode]:
-        if not isinstance(self._client, mqtt.Client):
-            raise RuntimeError("MQTT client is not initialized")
         try:
             if is_async:
                 return self._client.connect_async(self.host, self.port, *args, **kwargs)
@@ -266,8 +230,7 @@ class MqttClientV2(DataModel):
             raise RuntimeError("MQTT client is not initialized")
         
         return self._client.disconnect()
-    
-    
+
     def publish(
         self, 
         topic: str, 

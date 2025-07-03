@@ -1,8 +1,3 @@
-"""
-> https://github.com/confluentinc/confluent-kafka-python/blob/master/examples/asyncio_example.py
-"""
-
-
 import uuid
 import logging
 import asyncio
@@ -13,14 +8,14 @@ from dataclasses import dataclass, field
 try:
     import confluent_kafka
 except ImportError:
-    raise ImportError("confluent_kafka is not installed., Please install it using pip insall veronica[kafka]")
+    raise ImportError("confluent_kafka is not installed., Please install it using pip insall confluent-kafka")
 
 from veronica.base.models import DataModel
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "AsyncProducer",
+    "AIOProducer",
     "Producer"
 ]
 
@@ -41,10 +36,11 @@ class BaseProducer(DataModel):
         if self.client_id is None:
             self.client_id = f"{self.__class__.__name__}_{uuid.uuid4()}"
     
-        self._producer = confluent_kafka.Producer(self.to_configs())
+        self._producer = confluent_kafka.Producer(self.to_config())
         self._cancelled: bool = False
-        self._loop:  asyncio.AbstractEventLoop = asyncio.get_event_loop()
+        self._loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         self._poll_thread: threading.Thread = threading.Thread(target=self._poll_loop)
+        self._poll_thread.daemon = True
         self._poll_thread.start()
 
 
@@ -69,10 +65,11 @@ class BaseProducer(DataModel):
             logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}]")
     
 
-    def to_configs(self) -> dict:
+    def to_config(self) -> dict:
         """Formatting fields to build config for kafka producer
 
-        :return dict: _description_
+        Returns:
+            dict: _description_
         """
         return {k.replace("_", "."): v for k, v in self.to_dict(exclude_none=True).items()}
     
@@ -87,32 +84,33 @@ class BaseProducer(DataModel):
 
 
 @dataclass
-class AsyncProducer(BaseProducer):
-    """_summary_
-
+class AIOProducer(BaseProducer):
+    """async kafka producer
+    
     Notes:
         A produce method in which delivery notifications are made available
         via both the returned future and on_delivery callback (if specified).
-    
-    :param _type_ BaseProducer: _description_
-    """
-    def __post_init__(self) -> None:
-        super().__post_init__()
         
-        self._loop:  asyncio.AbstractEventLoop = asyncio.get_event_loop()
-        
+        refer: https://github.com/confluentinc/confluent-kafka-python/blob/master/examples/asyncio_example.py
 
+    Args:
+        BaseProducer (_type_): _description_
+    """
     def produce(
         self, 
         topic: str, 
         value: str, 
         on_delivery: Optional[Callable[[Optional[confluent_kafka.KafkaError], Optional[confluent_kafka.Message]], None]] = None
-    ):
+    ) -> asyncio.Future[Any]:
         """Produces a message to the given topic with a callback
-        
-        :param str topic: _description_
-        :param str value: _description_
-        :param Optional[Callable[[Any, Any], None]] on_delivery: _description_, defaults to None
+
+        Args:
+            topic (str): _description_
+            value (str): _description_
+            on_delivery (Optional[Callable[[Optional[confluent_kafka.KafkaError], Optional[confluent_kafka.Message]], None]], optional): _description_. Defaults to None.
+
+        Returns:
+            asyncio.Future[Any]: _description_
         """
         result = self._loop.create_future()
         def ack(err, msg) -> None:

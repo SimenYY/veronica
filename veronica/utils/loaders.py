@@ -180,11 +180,12 @@ class TomlLoader(Loader):
     def load(self, content: str) -> dict:
         import toml
         return toml.loads(content)
-
+    
+    
 @dataclass
 class Json5Loader(Loader):
-    
-    
+
+
     def load(self, content: str) -> dict:
         import pyjson5
         return pyjson5.loads(content)
@@ -193,19 +194,21 @@ class Json5Loader(Loader):
 
 
 @dataclass()
-class LoaderManager:
-    """
+class LoadManager:
+    """加载管理器
+    
     >>> loader_manager = LoaderManager()
     >>> _ = loader_manager.add_loader_by_format("json")
     >>> _ = loader_manager.add_loader_by_format("yaml").add_loader_by_format("toml")
     >>> print(loader_manager.build_chain())
     JsonLoader --> YamlLoader --> TomlLoader
+    
+    Raises:
+        TypeError: _description_
+        ValueError: _description_
 
-    :raises TypeError: _description_
-    :raises ValueError: _description_
-    :raises ValueError: _description_
-    :raises ValueError: _description_
-    :return _type_: _description_
+    Returns:
+        _type_: _description_
     """
     _loaders: List[Loader] = field(default_factory=list)
     

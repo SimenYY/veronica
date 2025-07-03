@@ -1,17 +1,30 @@
 [project]
 name = "veronica"
-version = "0.1.0"
+dynamic = ["version"]
+authors = [
+    {name= "He Yinyu", email="heyinyu.sensi@foxmail.com"}
+]
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "art>=6.5",
     "colorlog>=6.9.0",
     "filelock>=3.18.0",
     "loguru>=0.7.3",
     "pydantic-settings>=2.9.1",
+    "paho-mqtt>=2.1.0",
+    "confluent-kafka>=2.10.0",
+    "objgraph>=3.6.2",
+    "paho-mqtt>=2.1.0",
+    "confluent-kafka>=2.10.0",
+    "pytest>=8.4.1",
+    "loguru-config>=0.1.0",
+    "setuptools-scm>=8.3.1",
 ]
 
-[project.optional-dependencies]
-mqtt = ["paho-mqtt>=2.1.0",]
-kafka = ["confluent-kafka>=2.10.0",]
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]

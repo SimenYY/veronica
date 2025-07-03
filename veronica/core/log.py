@@ -4,7 +4,11 @@ import inspect
 from typing import Union, Dict, Optional
 from dataclasses import dataclass
 from pathlib import Path
-from loguru import logger
+
+try:
+    from loguru import logger
+except ImportError:
+    raise ImportError("loguru is not installed., Please install it using pip insall loguru")
 
 __all__ = [
     "Defaults",
@@ -128,7 +132,7 @@ def configure_logging(
     compression: str = Defaults.LOG_COMPRESSION,
 
 ) -> None:
-    """配置logging由loguru输出
+    """配置logging由loguru 控制台和文件输出
 
     Args:
         config (Optional[Union[Dict, str, Path]], optional): config or file, 用于loguru_config. Defaults to None.
