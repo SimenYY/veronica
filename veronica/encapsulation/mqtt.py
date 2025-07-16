@@ -7,7 +7,7 @@ try:
     import paho.mqtt.client as mqtt
     from paho.mqtt.enums import CallbackAPIVersion, MQTTErrorCode
 except ImportError:
-    raise ImportError("paho-mqtt is not installed., Please install it using pip insall veronica[mqtt]")
+    raise ImportError("paho-mqtt is not installed., Please install it using pip insall paho-mqtt")
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class MqttClientV2():
         Uses MQTT v5.0
         Requires paho-mqtt >= 2.0
         
-        refer: https://github.com/eclipse-paho/paho.mqtt.python
+        reference: https://github.com/eclipse-paho/paho.mqtt.python
         
         封装目的是为了简化客户端的配置，提供默认的回调函数，以及日志
         
