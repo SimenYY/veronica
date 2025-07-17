@@ -44,13 +44,13 @@ class TestDelimiterBuffer:
         
     def test_data_too_long(self):
         with pytest.raises(ValueError):
-            data = b"1" * (self.buffer.max_length + 1)
+            data = b"1" * (self.buffer.size + 1)
             self.buffer.try_to_buffer(data)
     
     def test_buffer_overflow(self):
         with pytest.raises(ValueError):
             data = b"1" * 11
-            self.buffer._buffer = bytearray(b"1" * (self.buffer.max_length - 10))
+            self.buffer._buffer = bytearray(b"1" * (self.buffer.size - 10))
             self.buffer.try_to_buffer(data)
 
 

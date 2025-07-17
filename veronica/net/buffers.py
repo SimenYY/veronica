@@ -1,3 +1,6 @@
+""" 这个模块用来处理字节流
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any, Iterator, Generator
 
@@ -7,6 +10,8 @@ __all__ = [
     "HeaderFooterExtraBuffer",
     "HeaderLengthBuffer",
 ]
+
+BUFFER_SIZE: int = 16384
 
 class BaseBuffer(ABC):
     """缓冲区基类
@@ -20,7 +25,7 @@ class BaseBuffer(ABC):
         NotImplementedError: _description_
     """
     
-    max_length: int = 16384
+    size: int = BUFFER_SIZE
 
     def __init__(self) -> None:
         
@@ -49,15 +54,15 @@ class BaseBuffer(ABC):
             ValueError: data无法放入缓冲区
         """
         data_len = len(data)
-        if data_len > self.max_length:
-            raise ValueError(f"Data is too long, length is {data_len}, max length is {self.max_length}")
+        if data_len > self.size:
+            raise ValueError(f"Data is too long, length is {data_len}, max length is {self.size}")
         
         buffer_len = len(self._buffer)
         total_length = data_len + buffer_len
-        if total_length > self.max_length:
+        if total_length > self.size:
             raise ValueError(f"Buffer is exceeded, total length is {total_length}")
         
-        if buffer_len > self.max_length:
+        if buffer_len > self.size:
             self._buffer.clear()
             
         self._buffer.extend(data)
