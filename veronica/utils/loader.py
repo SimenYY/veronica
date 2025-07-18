@@ -18,7 +18,7 @@ __all__ = [
     "YamlLoader",
     "TomlLoader",
     "Json5Loader",
-    "LoaderManager",
+    "LoadManager",
 ]
 
 
@@ -197,7 +197,7 @@ class Json5Loader(Loader):
 class LoadManager:
     """加载管理器
     
-    >>> loader_manager = LoaderManager()
+    >>> loader_manager = LoadManager()
     >>> _ = loader_manager.add_loader_by_format("json")
     >>> _ = loader_manager.add_loader_by_format("yaml").add_loader_by_format("toml")
     >>> print(loader_manager.build_chain())

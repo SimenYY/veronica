@@ -1,6 +1,6 @@
 import pytest
 
-from veronica.net.buffers import (
+from veronica.net.buffer import (
     HeaderFooterBuffer,
     HeaderFooterExtraBuffer,
     HeaderLengthBuffer,

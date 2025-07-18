@@ -1,7 +1,7 @@
 import logging
 import threading
 from functools import wraps
-from typing import Any, Callable, Type
+from typing import Any, Callable
 import time
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,6 @@ def singleton(cls):
     """
     _instance = {}
     @synchronized
-    @wraps(cls)
     def _singleton(*args, **kwargs):
         if cls not in _instance:
             _instance[cls] = cls(*args, **kwargs)
@@ -82,7 +81,6 @@ def flyweight(cls):
             key += tuple(sorted_items)
         return key
     @synchronized
-    @wraps(cls)
     def _flyweight(*args, **kwargs):
         cache_key = f"{cls}_{_to_key(args, kwargs)}"
         if cache_key not in _instance:

@@ -1,44 +1,47 @@
-import sys
 import logging
 import inspect
-from typing import Union, Dict, Optional
 from dataclasses import dataclass
-from pathlib import Path
-
 try:
     from loguru import logger
 except ImportError:
     raise ImportError("loguru is not installed., Please install it using pip insall loguru")
 
 __all__ = [
-    "Defaults",
+    "PrefixLoggerAdapter",
     "PropagateFromLoguruHandler",
     "ColoredStreamHandler",
     "InterceptHandler",
     "intercept_logging",
-    "configure_logging",
 ]
 
 
-@dataclass(frozen=True)
-class Defaults:
-    LOG_DIR: Path = Path("logs")
-    LOG_FORMAT: str = (
-        "<level>{level: <8}</level> | "
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-    )
-    LOG_LEVEL: str = "DEBUG"
-    LOG_ROTATION: str = "00:00"
-    LOG_RETENTION: str = "3 days"
-    LOG_COMPRESSION: str = "zip"
+####################################################################################################
+#                                        logger adapter                                            #
+####################################################################################################
+
+
+class PrefixLoggerAdapter(logging.LoggerAdapter):
+    """Add external prefix to log messages.
+
+    Args:
+        logging (logging.Logger): _description_
+        
+    Examples:
+    >>> logger = logger.getLogger(__name__)
+    ... logger = PrefixLoggerAdapter(logger, prefix="your prefix")
+    """
+    def __init__(self, logger, *, prefix: str):
+        super().__init__(logger, extra={"prefix": prefix})
+    def process(self, msg, kwargs):
+        if self.extra and "prefix" in self.extra:
+            return f"{self.extra['prefix']} - {msg}", kwargs
+        
+        return super().process(msg, kwargs)
+
+####################################################################################################
+#                                        logging handler                                           #
+####################################################################################################
     
-    @classmethod
-    def get_log_file(cls, name: str) -> str:
-        log_path = cls.LOG_DIR / name
-        log_path.mkdir(parents=True, exist_ok=True)
-        log_file = log_path / (name + "_{time: YYYY-MM-DD}.log")
-        return str(log_file)
     
 class PropagateFromLoguruHandler(logging.Handler):
     """Propagate loguru messages to logging
@@ -84,8 +87,10 @@ class ColoredStreamHandler(logging.StreamHandler):
     """
     def __init__(self):
         super().__init__()
-
-        from colorlog import ColoredFormatter
+        try:
+            from colorlog import ColoredFormatter
+        except ImportError:
+            raise ImportError("colorlog is not installed")
 
         self.setFormatter(ColoredFormatter(
             "%(green)s%(asctime)s.%(msecs)03d"
@@ -112,62 +117,29 @@ class ColoredStreamHandler(logging.StreamHandler):
             },
             style='%'
         ))
-        
+
+
+####################################################################################################
+#                                        logging utils                                             #
+####################################################################################################
+
 
 def intercept_logging() -> None:
     """intercept all logging to loguru"""
     intercept_handler = InterceptHandler()
     # Configuares global logging
     logging.basicConfig(handlers=[intercept_handler], level=0, force=True)
-
-
-def configure_logging(
-    config: Optional[Union[Dict, str, Path]] = None,
-    *,
-    level: str = Defaults.LOG_LEVEL,
-    format: str = Defaults.LOG_FORMAT,
-    name: Optional[str] = None,
-    rotation: str = Defaults.LOG_ROTATION,
-    retention: str = Defaults.LOG_RETENTION,
-    compression: str = Defaults.LOG_COMPRESSION,
-
-) -> None:
-    """配置logging由loguru 控制台和文件输出
-
-    Args:
-        config (Optional[Union[Dict, str, Path]], optional): config or file, 用于loguru_config. Defaults to None.
-        level (str, optional): Defaults to Defaults.LOG_LEVEL.
-        format (str, optional): Defaults to Defaults.LOG_FORMAT.
-        name (Optional[str], optional): 日志二级目录名称，通常是应用名称. Defaults to None.
-        rotation (str, optional): 轮转方式. Defaults to Defaults.LOG_ROTATION.
-        retention (str, optional): 保留方式. Defaults to Defaults.LOG_RETENTION.
-        compression (str, optional): 压缩方式. Defaults to Defaults.LOG_COMPRESSION.
-
-    Raises:
-        ImportError: 导入异常
-    """
-    intercept_logging()
     
-    if config is not None:
-        try:
-            from loguru_config import LoguruConfig
-        except ImportError:
-            raise ImportError("loguru_config is not installed")
-        LoguruConfig.load(config)
-        return 
     
-    logger.remove()
-    logger.add(
-        sys.stdout,
-        level=level,
-        format=format,
+####################################################################################################
+#                                        logging config                                             #
+####################################################################################################
+
+
+@dataclass(frozen=True)
+class loguru_defaults:
+    FORMAT: str = (
+        "<level>{level: <8}</level> | "
+        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
     )
-    if name is not None:
-        logger.add(
-            Defaults.get_log_file(name),
-            level=level,
-            format=format,
-            rotation=rotation,
-            retention=retention,
-            compression=compression
-        )

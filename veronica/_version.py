@@ -1,3 +1,6 @@
-from importlib.metadata import version
+from importlib.metadata import version, PackageNotFoundError
 
-__version__ = version("veronica")
+try:
+    __version__ = version("veronica")
+except PackageNotFoundError:
+    __version__ = "dev"

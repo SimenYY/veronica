@@ -1,30 +1,23 @@
 [project]
 name = "veronica"
 dynamic = ["version"]
-authors = [
-    {name= "He Yinyu", email="heyinyu.sensi@foxmail.com"}
-]
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "art>=6.5",
-    "colorlog>=6.9.0",
+    "confluent-kafka>=2.11.0",
     "filelock>=3.18.0",
     "loguru>=0.7.3",
-    "pydantic-settings>=2.9.1",
     "paho-mqtt>=2.1.0",
-    "confluent-kafka>=2.10.0",
-    "objgraph>=3.6.2",
-    "paho-mqtt>=2.1.0",
-    "confluent-kafka>=2.10.0",
+    "prometheus-client>=0.22.1",
+    "pydantic-settings>=2.10.1",
     "pytest>=8.4.1",
-    "loguru-config>=0.1.0",
+    "pytest-asyncio>=1.0.0",
     "setuptools-scm>=8.3.1",
 ]
 
 [build-system]
-requires = ["setuptools>=80", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
