@@ -1,120 +1,87 @@
-import asyncio
 import logging
-from typing import Self, final
-from veronica.core.log import PrefixLoggerAdapter
+import asyncio
+from typing import final
 
 logger = logging.getLogger(__name__)
 
+class TcpClientProtocol(asyncio.Protocol):
 
-Address = tuple[str, int]
-
-
-class TcpProtocol(asyncio.Protocol):
-    """Tcp protocol
-
-    为了给回调事件增加固定的处理以及日志的记录，使用`on_xxx`开头的方法来解耦，处理回调事件
+    def __init__(self, on_lost_fut: asyncio.Future) -> None:
+        self.on_lost_fut = on_lost_fut
+        self._transport: asyncio.BaseTransport | None = None
+        self._loop = asyncio.get_running_loop()
     
-    在协议活动中记录日志，建议使用协议自带的`protocol_logger`记录，自带远端地址
-    
-    Args:
-        transport: (asyncio.Transport): 传输对象
-    
-
-    """
-    
-    transport: asyncio.Transport | None
-    local_address: Address | None 
-    remote_address: Address | None
-    protocol_logger: logging.Logger | logging.LoggerAdapter
-    def __init__(self):
-        self.transport = None
-        self.local_address = None
-        self.remote_address = None
-        self.protocol_logger = logger
     @final
-    def connection_made(self, transport: asyncio.Transport) -> None:
-        """ Callback when connection is made
-        
-        #* 用户须使用`on_connection_made`方法代替本方法
-        
-        Args:
-            transport (asyncio.Transport): _description_
-        """
-        self.transport = transport
-        self.local_address = transport.get_extra_info("sockname")
-        self.remote_address = transport.get_extra_info("peername")
-        global logger
-        self.protocol_logger=PrefixLoggerAdapter(logger, prefix=str(self.remote_address))
-        self.protocol_logger.info("Connection made")
-        return self.on_connection_made()
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        """连接建立时回调
 
+        Args:
+            transport (asyncio.BaseTransport): 传输对象
+
+        """
+        logger.info("connection made")
+        self._transport = transport
+        return self.on_connection_made()
+    
     @final
     def data_received(self, data: bytes) -> None:
-        """Callback when data is received
-        
-        #* 用户须用`on_data_received`方法代替本方法
+        """数据接收时回调
 
-        Returns:
-            _type_: _description_
+        Args:
+            data (bytes): 接收到的数据
         """
-        self.protocol_logger.debug(f"RXD < {data.hex(' ')}")
-        
-        return self.on_data_received(data)
+        pass
     
     @final
     def connection_lost(self, exc: Exception | None) -> None:
-        """Callback when connection is lost
+        """连接丢失时回调
+
+        Args:
+            exc (Exception | None): 如果时None，则表示主动断开，否则含有异常信息
+        """
+        logger.debug("connection lost")
+        # 主动调用transport.close()时，也会调用connection_lost, 此时exc为None，该
+        # 情况下，不触发重连
+        if exc is not None:
+            self.on_lost_fut.set_result(True)
         
-        #* 用户须用`on_connection_lost`方法代替本方法
- 
+        return self.on_connection_lost()
+    def is_connected(self) -> bool:
+        """判断是否连接
 
         Returns:
-            _type_: _description_
+            bool: 连接状态
         """
-        self.protocol_logger.error(f"Connection lost, exc: {exc}")
-        
-        self.transport = None
-        
-        return self.on_connection_lost(exc)
+        return self._transport is not None and not self._transport.is_closing()
+
+    def transmit_data(self, data: bytes) -> None:
+        """发送数据
+
+        Args:
+            data (bytes): 需要发送的数据
+
+        Raises:
+            ConnectionError: transpost 不存在或者正在关闭
+        """
+        if self.is_connected():
+            self._transport.write(data)
+        else:
+            raise ConnectionError("Transport can't be used")
+
+    def on_connection_made(self) -> None:
+        """连接建立时回调，用户调用
+        """
+        pass
     
     def on_data_received(self, data: bytes) -> None:
-        """Callback when data is received
+        """数据接收时回调，用户调用
 
         Args:
             data (bytes): _description_
         """
         pass
     
-    def on_connection_lost(self, exc: Exception | None) -> None:
-        """Callback when connection is lost
-
-        Args:
-            exc (Exception | None): _description_
+    def on_connection_lost(self) -> None:
+        """连接丢失时回调，用户调用
         """
         pass
-    
-    def on_connection_made(self) -> None:
-        """Callback when connection is made
-        """
-        pass
-    
-    def transmit_data(self, data: bytes) -> None:
-        """主动发送数据
-
-        Args:
-            data (bytes): 需要发送的数据
-        """
-        assert self.transport is not None, (
-            "transport is None"
-        )
-        self.transport.write(data)
-        self.protocol_logger.debug(f"TXD > {data.hex(' ')}")
-        
-    @classmethod
-    def build(cls) -> Self:
-        
-        p = cls()
-        
-        return p
-    
-

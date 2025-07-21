@@ -1,17 +1,24 @@
 """ 这个模块用来处理字节流
+
+通过不同种类的标识，来获取字节流中所需要的子串，例如有分隔符、头尾标识符、头标识符加上长度标识符等等
+建立此模块方便获取子串
 """
 
 from abc import ABC, abstractmethod
 from typing import Any, Iterator, Generator
 
 __all__ = [
-    "DelimiterBuffer",
+    "SeparatorBuffer",
     "HeaderFooterBuffer",
     "HeaderFooterExtraBuffer",
     "HeaderLengthBuffer",
 ]
 
-BUFFER_SIZE: int = 16384
+BUFFER_SIZE: int = 2 ** 16  # 64 KiB
+
+
+
+
 
 class BaseBuffer(ABC):
     """缓冲区基类
@@ -71,15 +78,15 @@ class DelimiterBuffer(BaseBuffer):
     """按分隔符的缓冲区
 
     Attributes:
-        delimiter (bytes): 分隔符
+        Separator (bytes): 分隔符
     """
-    def __init__(self, delimiter: bytes = b'\r\n'):
+    def __init__(self, Separator: bytes = b'\r\n'):
         super().__init__()
         
-        if not delimiter:
-            raise ValueError("Delimiter cannot be empty")
+        if not Separator:
+            raise ValueError("Separator cannot be empty")
         
-        self.delimiter = delimiter
+        self.Separator = Separator
     
     def recv(self, data: bytes) -> Generator[bytes, None, None]:
         
@@ -87,7 +94,7 @@ class DelimiterBuffer(BaseBuffer):
         
         while self._buffer:
             try:
-                target, self._buffer = self._buffer.split(self.delimiter, maxsplit=1)
+                target, self._buffer = self._buffer.split(self.Separator, maxsplit=1)
                 yield bytes(target)
             except ValueError:
                 break
