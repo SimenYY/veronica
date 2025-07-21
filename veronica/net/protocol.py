@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import final
+from typing import final, cast
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +8,7 @@ class TcpClientProtocol(asyncio.Protocol):
 
     def __init__(self, on_lost_fut: asyncio.Future) -> None:
         self.on_lost_fut = on_lost_fut
-        self._transport: asyncio.BaseTransport | None = None
+        self._transport: asyncio.Transport | None = None
         self._loop = asyncio.get_running_loop()
     
     @final
@@ -20,7 +20,7 @@ class TcpClientProtocol(asyncio.Protocol):
 
         """
         logger.info("connection made")
-        self._transport = transport
+        self._transport = cast(asyncio.Transport, transport)
         return self.on_connection_made()
     
     @final
@@ -42,10 +42,14 @@ class TcpClientProtocol(asyncio.Protocol):
         logger.debug("connection lost")
         # 主动调用transport.close()时，也会调用connection_lost, 此时exc为None，该
         # 情况下，不触发重连
+        self._transport = None
+        
         if exc is not None:
             self.on_lost_fut.set_result(True)
         
         return self.on_connection_lost()
+    
+    @property
     def is_connected(self) -> bool:
         """判断是否连接
 
@@ -63,7 +67,7 @@ class TcpClientProtocol(asyncio.Protocol):
         Raises:
             ConnectionError: transpost 不存在或者正在关闭
         """
-        if self.is_connected():
+        if self.is_connected:
             self._transport.write(data)
         else:
             raise ConnectionError("Transport can't be used")
