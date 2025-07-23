@@ -2,7 +2,7 @@ import logging
 import asyncio
 import random
 from typing import Type, Self
-from veronica.net.protocol import TCPClientProtocol
+from veronica.transport.protocol import TCPClientProtocol
 
 logger = logging.getLogger(__name__)
 
