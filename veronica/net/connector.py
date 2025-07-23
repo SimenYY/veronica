@@ -2,13 +2,13 @@ import logging
 import asyncio
 import random
 from typing import Type, Self
-from veronica.net.protocol import TcpClientProtocol
+from veronica.net.protocol import TCPClientProtocol
 
 logger = logging.getLogger(__name__)
 
 
-class Connector:
-     """连接类
+class TCPConnector:
+     """TCP连接类
 
      Attributes:
           host (str): 服务器地址
@@ -21,18 +21,21 @@ class Connector:
           _continue_trying (bool): 是否继续尝试连接
           _on_lost_fut (asyncio.Future): 非正常连接丢失回调Future
      """
+     
      min_delay: float = 1.0
      max_delay: float = 60.0
 
      factor: float = 1.6180339887498948
      jitter: float = 0.119626565582 
+
      def __init__(
           self, 
           host: str,
           port: int,
           auto_reconnect: bool,
           use_jitter: bool,
-          protocol_class: Type[TcpClientProtocol]
+          protocol_class: Type[TCPClientProtocol],
+          loop: asyncio.AbstractEventLoop | None = None
      ):
           self.host = host
           self.port = port
@@ -40,7 +43,7 @@ class Connector:
           self.protocol_class = protocol_class
           self.use_jitter = use_jitter
           
-          self._loop = asyncio.get_running_loop()
+          self._loop = loop or asyncio.get_running_loop()
           self._retry_delay = self.min_delay
           self._continue_trying = True
           self._on_lost_fut = self._loop.create_future()
@@ -53,7 +56,8 @@ class Connector:
           *,
           auto_reconnect: bool = True,
           use_jitter: bool = False,
-          protocol_class: Type[TcpClientProtocol] = TcpClientProtocol
+          protocol_class: Type[TCPClientProtocol] = TCPClientProtocol,
+          loop: asyncio.AbstractEventLoop | None = None
      ) -> Self:
           """创建连接
 
@@ -72,7 +76,8 @@ class Connector:
                port,
                auto_reconnect,
                use_jitter,
-               protocol_class
+               protocol_class,
+               loop
           )
           
           if connector.auto_reconnect:
@@ -96,7 +101,7 @@ class Connector:
           """连接
           """
           transport, protocol = await self._loop.create_connection(
-               lambda: self.protocol_class(self._on_lost_fut),
+               lambda: self.protocol_class(self._on_lost_fut, self._loop),
                self.host, self.port   
           )
           self._transport = transport
@@ -112,10 +117,9 @@ class Connector:
                try:
                     await self._connect()
                     self._reset_delay()
-                    fut = self._on_lost_fut
-                    if await fut:
+                    on_lost_fut = self._on_lost_fut
+                    if await on_lost_fut:
                          self._on_lost_fut = self._loop.create_future()
-                         fut = None
                          continue
                     break 
                except OSError as e:
