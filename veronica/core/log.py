@@ -1,7 +1,6 @@
 import logging
 import inspect
 from dataclasses import dataclass
-from tkinter import N
 try:
     from loguru import logger
 except ImportError:
