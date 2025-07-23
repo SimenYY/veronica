@@ -1,6 +1,7 @@
 import logging
 import inspect
 from dataclasses import dataclass
+from tkinter import N
 try:
     from loguru import logger
 except ImportError:
@@ -30,8 +31,12 @@ class PrefixLoggerAdapter(logging.LoggerAdapter):
     >>> logger = logger.getLogger(__name__)
     ... logger = PrefixLoggerAdapter(logger, prefix="your prefix")
     """
-    def __init__(self, logger, *, prefix: str):
-        super().__init__(logger, extra={"prefix": prefix})
+    def __init__(self, logger, *, prefix: str | None = None):
+        if prefix:
+            extra = {"prefix": prefix}
+        else:
+            extra = None
+        super().__init__(logger, extra)
     def process(self, msg, kwargs):
         if self.extra and "prefix" in self.extra:
             return f"{self.extra['prefix']} - {msg}", kwargs
