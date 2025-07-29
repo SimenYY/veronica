@@ -5,6 +5,10 @@ from veronica.core.log import PrefixLoggerAdapter
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "TCPClientProtocol"
+]
+
 class TCPClientProtocol(asyncio.Protocol):
     """TCP 客户端协议类
     

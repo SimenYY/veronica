@@ -6,6 +6,9 @@ from veronica.transport.protocol import TCPClientProtocol
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "TCPConnector"
+]
 
 class TCPConnector:
      """TCP连接类
@@ -20,6 +23,10 @@ class TCPConnector:
           _retry_delay (float): 重连延迟
           _continue_trying (bool): 是否继续尝试连接
           _on_lost_fut (asyncio.Future): 非正常连接丢失回调Future
+          
+     Example:
+     >>> connector = TcpConnector.create("127.0.0.1", 8000, protocol_class=YourProtocol)
+     
      """
      
      min_delay: float = 1.0
