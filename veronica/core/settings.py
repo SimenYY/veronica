@@ -6,7 +6,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
     JsonConfigSettingsSource,
     PydanticBaseSettingsSource,
-) 
+)
 
 __all__ = [
     "YamlSettings",
@@ -46,12 +46,13 @@ class YamlSettings(BaseSettings):
             yaml_file=cls.model_config.get("yaml_file", Path("")),
             yaml_file_encoding=cls.model_config.get("yaml_file_encoding", None)
         )
-        json_settings = JsonConfigSettingsSource(
-            cls,
-            json_file=cls.model_config.get("json_file", Path("")),
-            json_file_encoding=cls.model_config.get("json_file_encoding", None)
-        )
         return (yaml_settings, ) + sources
+
+    model_config = SettingsConfigDict(
+        yaml_file="config.yaml",
+        yaml_file_encoding="utf-8",
+        env_prefix="v_"
+    )
 
 class JsonSettings(BaseSettings):
     """添加Yaml, Json配置源
@@ -80,14 +81,15 @@ class JsonSettings(BaseSettings):
             dotenv_settings,
             file_secret_settings,
         )
-        yaml_settings = YamlConfigSettingsSource(
-            cls,
-            yaml_file=cls.model_config.get("yaml_file", Path("")),
-            yaml_file_encoding=cls.model_config.get("yaml_file_encoding", None)
-        )
         json_settings = JsonConfigSettingsSource(
             cls,
             json_file=cls.model_config.get("json_file", Path("")),
             json_file_encoding=cls.model_config.get("json_file_encoding", None)
         )
         return (json_settings, ) + sources
+    
+    model_config = SettingsConfigDict(
+        json_file="config.json",
+        json_file_encoding="utf-8",
+        env_prefix="v_"
+    )
