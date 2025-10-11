@@ -1,10 +1,13 @@
 import logging
 import inspect
 from dataclasses import dataclass
+
 try:
     from loguru import logger
 except ImportError:
-    raise ImportError("loguru is not installed., Please install it using pip insall loguru")
+    raise ImportError(
+        "loguru is not installed., Please install it using pip insall loguru"
+    )
 
 __all__ = [
     "PrefixLoggerAdapter",
@@ -14,10 +17,9 @@ __all__ = [
     "intercept_logging",
 ]
 
-
-####################################################################################################
-#                                        logger adapter                                            #
-####################################################################################################
+# ==============================================================================
+# logger adapter
+# ==============================================================================
 
 
 class PrefixLoggerAdapter(logging.LoggerAdapter):
@@ -25,34 +27,38 @@ class PrefixLoggerAdapter(logging.LoggerAdapter):
 
     Args:
         logging (logging.Logger): _description_
-        
+
     Examples:
     >>> logger = logger.getLogger(__name__)
     ... logger = PrefixLoggerAdapter(logger, prefix="your prefix")
     """
+
     def __init__(self, logger, *, prefix: str | None = None):
         if prefix:
             extra = {"prefix": prefix}
         else:
             extra = None
         super().__init__(logger, extra)
+
     def process(self, msg, kwargs):
         if self.extra and "prefix" in self.extra:
             return f"{self.extra['prefix']} - {msg}", kwargs
-        
+
         return super().process(msg, kwargs)
 
-####################################################################################################
-#                                        logging handler                                           #
-####################################################################################################
-    
-    
+
+# ==============================================================================
+# logging hander
+# ==============================================================================
+
+
 class PropagateFromLoguruHandler(logging.Handler):
     """Propagate loguru messages to logging
 
     Usage:
         logger.add(PropagateHandler(), format="{message}")
     """
+
     def emit(self, record: logging.LogRecord) -> None:
         logging.getLogger(record.name).handle(record)
 
@@ -67,6 +73,7 @@ class InterceptHandler(logging.Handler):
     For more info see:
     https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
     """
+
     def emit(self, record: logging.LogRecord) -> None:
         # Get corresponding Loguru level if it exists.
         level: str | int
@@ -81,14 +88,14 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
-        
-        
-        
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
+
+
 class ColoredStreamHandler(logging.StreamHandler):
-    """Colored stream handler
-    
-    """
+    """Colored stream handler"""
+
     def __init__(self):
         super().__init__()
         try:
@@ -96,36 +103,38 @@ class ColoredStreamHandler(logging.StreamHandler):
         except ImportError:
             raise ImportError("colorlog is not installed")
 
-        self.setFormatter(ColoredFormatter(
-            "%(green)s%(asctime)s.%(msecs)03d"
-            "%(red)s | "
-            "%(log_color)s%(levelname)-8s"
-            "%(red)s | "
-            "%(cyan)s%(name)s"
-            "%(red)s:"
-            "%(cyan)s%(module)s"
-            "%(red)s:"
-            "%(cyan)s%(funcName)s"
-            "%(red)s:"
-            "%(cyan)s%(lineno)d"
-            "%(red)s - "
-            "%(log_color)s%(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-            reset=True,
-            log_colors={
-                'DEBUG': 'blue',
-                'INFO': 'white',
-                'WARNING': 'yellow',
-                'ERROR': 'red',
-                'CRITICAL': 'white,bg_red',
-            },
-            style='%'
-        ))
+        self.setFormatter(
+            ColoredFormatter(
+                "%(green)s%(asctime)s.%(msecs)03d"
+                "%(red)s | "
+                "%(log_color)s%(levelname)-8s"
+                "%(red)s | "
+                "%(cyan)s%(name)s"
+                "%(red)s:"
+                "%(cyan)s%(module)s"
+                "%(red)s:"
+                "%(cyan)s%(funcName)s"
+                "%(red)s:"
+                "%(cyan)s%(lineno)d"
+                "%(red)s - "
+                "%(log_color)s%(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+                reset=True,
+                log_colors={
+                    "DEBUG": "blue",
+                    "INFO": "white",
+                    "WARNING": "yellow",
+                    "ERROR": "red",
+                    "CRITICAL": "white,bg_red",
+                },
+                style="%",
+            )
+        )
 
 
-####################################################################################################
-#                                        logging utils                                             #
-####################################################################################################
+# ==============================================================================
+# logging utils
+# ==============================================================================
 
 
 def intercept_logging() -> None:
@@ -133,11 +142,11 @@ def intercept_logging() -> None:
     intercept_handler = InterceptHandler()
     # Configuares global logging
     logging.basicConfig(handlers=[intercept_handler], level=0, force=True)
-    
-    
-####################################################################################################
-#                                        logging config                                             #
-####################################################################################################
+
+
+# ==============================================================================
+# logging config
+# ==============================================================================
 
 
 @dataclass(frozen=True)
